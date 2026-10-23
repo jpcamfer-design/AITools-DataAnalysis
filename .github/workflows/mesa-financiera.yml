@@ -1,12 +1,16 @@
 # Mesa Financiera en la nube: funciona con tu computadora apagada.
-#  · Cada 10 minutos revisa si escribiste /analiza TICKER en Telegram y responde.
+#  · Cada 30 min, de lunes a viernes en horario de la bolsa de NY, revisa si escribiste
+#    /analiza TICKER en Telegram y responde.
 #  · También puedes lanzarlo a mano (incluso desde la app de GitHub en tu celular):
 #    Actions → mesa-financiera → Run workflow → escribe el ticker.
 name: mesa-financiera
 
 on:
   schedule:
-    - cron: "*/10 * * * *"          # hora UTC; GitHub puede retrasar unos minutos las ejecuciones
+    # Hora UTC. NYSE abre 9:30-16:00 hora de NY = 13:30-20:00 UTC en horario de verano
+    # y 14:30-21:00 UTC en invierno. 13-21 UTC cubre ambos (≈ 7:00-15:30 hora CDMX).
+    # GitHub puede retrasar o saltarse ejecuciones programadas cuando hay mucha carga.
+    - cron: "*/30 13-21 * * 1-5"
   workflow_dispatch:
     inputs:
       ticker:
@@ -23,7 +27,7 @@ concurrency:                        # evita dos ejecuciones al mismo tiempo
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: read                    # mínimo privilegio: el workflow solo lee el código
 
 jobs:
   mesa:
@@ -37,13 +41,23 @@ jobs:
       MODO_SIMULACION: ${{ inputs.simulacion && '1' || '0' }}
       TICKER: ${{ inputs.ticker }}  # se pasa como variable, nunca se pega dentro del comando
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      # Actions fijadas por commit (SHA) y no por etiqueta: si alguien mueve la etiqueta v7
+      # a código malicioso, este workflow sigue usando la versión revisada. Dependabot las actualiza.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false  # no deja el token de GitHub guardado en el runner
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
           cache: pip
       - name: Instalar dependencias
         run: pip install -r requirements.txt
+
+      - name: Revisar que existan los Secrets (sin mostrarlos)
+        run: |
+          for nombre in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID ANTHROPIC_API_KEY ALPHAVANTAGE_API_KEY; do
+            if [ -z "${!nombre}" ]; then echo "::warning::Falta el Secret $nombre (el bot puede caer en modo simulación)"; fi
+          done
 
       - name: Analizar el ticker indicado a mano
         if: github.event_name == 'workflow_dispatch' && env.TICKER != ''
@@ -54,9 +68,9 @@ jobs:
 
       - name: Guardar evidencias
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: evidencias-${{ github.run_number }}
           path: salidas/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7         # el repo es público: guardar evidencias solo lo necesario
