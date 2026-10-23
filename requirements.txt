@@ -1,3 +1,4 @@
-anthropic>=1.0
-requests>=2.31
-python-dotenv>=1.0
+# Con tope de versión mayor: una actualización grande no entra sola sin pasar por las pruebas
+anthropic>=1.0,<2
+requests>=2.31,<3
+python-dotenv>=1.0,<2

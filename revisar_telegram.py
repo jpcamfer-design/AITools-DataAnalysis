@@ -1,4 +1,4 @@
-"""Revisión única de mensajes pendientes. Lo ejecuta GitHub Actions cada 10 minutos.
+"""Revisión única de mensajes pendientes. Lo ejecuta GitHub Actions cada 30 min en horario de mercado (L-V).
 
 No necesita tu computadora encendida: lee los /analiza que escribiste en Telegram,
 corre la cadena de agentes para cada uno, responde y termina.
@@ -13,7 +13,7 @@ from mesa.telegram_io import confirmar_leidos, obtener_mensajes, preparar_pollin
 def main():
     print("Configuración:", config.resumen())
     if not config.TELEGRAM_BOT_TOKEN:
-        # Copia de la plantilla sin Secrets: terminar en verde, sin correos de error cada 10 minutos.
+        # Copia de la plantilla sin Secrets: terminar en verde, sin correos de error en cada revisión.
         print("ℹ️ Sin TELEGRAM_BOT_TOKEN: nada que revisar. Agrega tus Secrets para activar el bot.")
         return
     try:
@@ -37,7 +37,8 @@ def main():
                 if resultado:
                     print(f"✅ {resultado['ticker']} atendido · evidencia: {resultado['archivo']}")
         except Exception as error:                           # un error no detiene a los demás
-            print(f"⚠️ Error con el mensaje {actualizacion['update_id']}: {type(error).__name__}: {error}")
+            print(f"⚠️ Error con el mensaje {actualizacion['update_id']}: {type(error).__name__}: "
+                  f"{config.ocultar_secretos(error)}")
         finally:
             confirmar_leidos(actualizacion["update_id"])      # nunca se procesa dos veces
 
