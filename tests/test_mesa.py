@@ -124,7 +124,7 @@ def test_revision_de_github_actions_atiende_y_confirma(monkeypatch):
 
 
 def test_revision_sin_token_termina_sin_error(monkeypatch, capsys):
-    """Una copia de la plantilla sin Secrets no debe marcar error en Actions cada 10 minutos."""
+    """Una copia de la plantilla sin Secrets no debe marcar error en Actions en cada revisión."""
     import revisar_telegram as rt
     monkeypatch.setattr(config, "TELEGRAM_BOT_TOKEN", "")
     rt.main()
@@ -139,3 +139,47 @@ def test_los_agentes_se_presentan_con_su_nombre():
     for nombre in ("Batuta", "Iris", "Euler", "Vera"):
         assert nombre in texto
     assert r["entrega_3_nota"].startswith(agentes.FIRMA_VERA)
+
+
+# ---------------- Cambios de la actividad: Euler estilo Buffett y seguridad ----------------
+@pytest.mark.parametrize("valor, esperado", [("0.25", 25.0), (0.153, 15.3), ("18%", 18.0), ("25", 25.0), (None, None), ("None", None)])
+def test_roe_y_margen_vienen_en_decimal(valor, esperado):
+    assert agentes.a_porcentaje(valor) == esperado
+
+
+def test_checklist_buffett_negocio_de_calidad():
+    ind = agentes.calcular_indicadores({"roe": "0.30", "margen_neto": "0.20", "pe_ratio": "15", "beta": "0.9"})
+    assert ind["rendimiento_utilidades_pct"] == 6.67          # 100 / 15
+    assert ind["calificacion_buffett"] == "4/4 criterios con dato"
+    assert ind["sello_buffett"].startswith("🏰")
+
+
+def test_checklist_buffett_caro_y_volatil():
+    ind = agentes.calcular_indicadores({"roe": "0.05", "margen_neto": "0.02", "pe_ratio": "80", "beta": "2"})
+    assert ind["criterios_cumplidos"] == [] and ind["sello_buffett"].startswith("⏸️")
+
+
+def test_checklist_buffett_sin_datos_no_inventa():
+    ind = agentes.calcular_indicadores({})
+    assert ind["calificacion_buffett"] == "0/0 criterios con dato" and ind["sello_buffett"].startswith("⚪")
+
+
+def test_pe_negativo_no_da_rendimiento():
+    assert agentes.calcular_indicadores({"pe_ratio": "-5"})["rendimiento_utilidades_pct"] is None
+
+
+def test_nota_incluye_filtro_de_calidad():
+    r = pl.pipeline("KO", avisar=lambda t: None)
+    assert "Filtro de calidad" in r["entrega_3_nota"]
+
+
+def test_sin_chat_configurado_nadie_usa_el_bot(monkeypatch):
+    from mesa import telegram_io
+    monkeypatch.setattr(config, "TELEGRAM_CHAT_ID", "")
+    assert telegram_io.chat_autorizado(12345) is False       # falla cerrado
+
+
+def test_los_errores_no_muestran_llaves(monkeypatch):
+    monkeypatch.setattr(config, "TELEGRAM_BOT_TOKEN", "123:SECRETO")
+    error = "Max retries exceeded with url: /bot123:SECRETO/getUpdates"
+    assert "SECRETO" not in config.ocultar_secretos(error)
