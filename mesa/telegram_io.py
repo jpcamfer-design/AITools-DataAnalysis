@@ -51,5 +51,6 @@ def confirmar_leidos(ultimo_update_id):
 
 
 def chat_autorizado(chat_id):
-    """Si TELEGRAM_CHAT_ID está configurado, solo ese chat puede usar el bot."""
-    return not config.TELEGRAM_CHAT_ID or str(chat_id) == config.TELEGRAM_CHAT_ID
+    """Solo TELEGRAM_CHAT_ID puede usar el bot. Sin chat configurado, nadie (falla cerrado):
+    así un desconocido que encuentre el bot no puede gastar tus llaves de Claude y Alpha Vantage."""
+    return bool(config.TELEGRAM_CHAT_ID) and str(chat_id) == config.TELEGRAM_CHAT_ID

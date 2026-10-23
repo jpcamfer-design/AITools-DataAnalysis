@@ -35,6 +35,18 @@ MAX_ANALISIS_POR_RUN = int(_texto("MAX_ANALISIS_POR_RUN", "3"))   # cuida la cuo
 CARPETA_SALIDAS = _texto("CARPETA_SALIDAS", "salidas")
 
 
+def ocultar_secretos(texto):
+    """Reemplaza cualquier llave que aparezca en un texto (p. ej. un error con la URL de Telegram).
+
+    GitHub ya enmascara los Secrets en sus logs, pero en tu compu, Colab o Codespaces no:
+    por eso todo error se imprime pasando por aquí."""
+    texto = str(texto)
+    for valor in (TELEGRAM_BOT_TOKEN, ANTHROPIC_API_KEY, ALPHAVANTAGE_API_KEY):
+        if valor:
+            texto = texto.replace(valor, "***")
+    return texto
+
+
 def resumen():
     """Estado de la configuración sin revelar ningún valor secreto."""
     def estado(valor):
